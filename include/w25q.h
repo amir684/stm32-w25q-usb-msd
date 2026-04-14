@@ -7,11 +7,18 @@
 #define W25Q_CS_PORT   GPIOA
 #define W25Q_CS_PIN    GPIO_PIN_4
 
-/* ---- קבועים של W25Q64 ---- */
-#define W25Q64_CAPACITY_BYTES   (8UL * 1024 * 1024)   /* 8MB */
-#define W25Q64_PAGE_SIZE        256U                   /* bytes */
-#define W25Q64_SECTOR_SIZE      4096U                  /* bytes – גודל מחיקה */
-#define W25Q64_SECTOR_COUNT     (W25Q64_CAPACITY_BYTES / W25Q64_SECTOR_SIZE)
+/* ── Single configuration knob ────────────────────────────────────────────
+   Change FLASH_SIZE_MB to match your chip and everything else follows.
+   Common W25Qxx sizes: 1, 2, 4, 8, 16, 32, 64 (MB)
+   Page and sector geometry is identical across the entire W25Qxx family.  */
+#define FLASH_SIZE_MB  8U
+
+/* Derived – do not edit below this line */
+#define W25Q_CAPACITY_BYTES  ((FLASH_SIZE_MB) * 1024UL * 1024UL)
+#define W25Q_PAGE_SIZE       256U    /* write unit – all W25Qxx models */
+#define W25Q_SECTOR_SIZE     4096U   /* erase unit – all W25Qxx models */
+#define W25Q_SECTOR_COUNT    (W25Q_CAPACITY_BYTES / W25Q_SECTOR_SIZE)
+
 
 /* ---- API ---- */
 void     W25Q_Init(SPI_HandleTypeDef *hspi);

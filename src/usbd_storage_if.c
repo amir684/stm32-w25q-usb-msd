@@ -13,9 +13,9 @@
 
 /* ---- גדלים ---- */
 #define BLOCK_SIZE        512U                          /* SCSI block */
-#define SECTOR_SIZE       W25Q64_SECTOR_SIZE            /* 4096B */
+#define SECTOR_SIZE       W25Q_SECTOR_SIZE            /* 4096B */
 #define BLOCKS_PER_SECTOR (SECTOR_SIZE / BLOCK_SIZE)   /* 8 */
-#define TOTAL_BLOCKS      (W25Q64_CAPACITY_BYTES / BLOCK_SIZE) /* 16384 */
+#define TOTAL_BLOCKS      (W25Q_CAPACITY_BYTES / BLOCK_SIZE) /* 16384 */
 
 /* ---- SCSI Inquiry data (36 bytes) ---- */
 int8_t STORAGE_Inquirydata_FS[] = {
@@ -109,9 +109,9 @@ static int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf,
         W25Q_EraseSector(sector_addr);
 
         /* 4. כתוב בחזרה עמוד-עמוד (256B) */
-        for (uint32_t p = 0; p < SECTOR_SIZE; p += W25Q64_PAGE_SIZE)
+        for (uint32_t p = 0; p < SECTOR_SIZE; p += W25Q_PAGE_SIZE)
         {
-            W25Q_WritePage(sector_addr + p, _sector_buf + p, W25Q64_PAGE_SIZE);
+            W25Q_WritePage(sector_addr + p, _sector_buf + p, W25Q_PAGE_SIZE);
         }
 
         i += blk_in_sector;
