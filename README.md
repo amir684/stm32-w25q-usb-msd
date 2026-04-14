@@ -152,27 +152,69 @@ void *USBD_static_malloc(uint32_t size) {
 
 ## Storage layer
 
-The W25Q64 has a **4 KB erase granularity** but USB/SCSI works in **512 B blocks**. The storage interface bridges this with a read-modify-write strategy:
+### The NOR flash mismatch problem
+
+NOR flash cannot overwrite existing data in place — a cell must be **erased before it can be written**, and the minimum erase unit is **4 KB**. USB/SCSI, on the other hand, works in **512 B blocks**. Bridging this gap requires a read-modify-write cycle every time a block is written.
+
+The SCSI layer always delivers **exactly one 512 B block per `STORAGE_Write_FS` call** (limited by the 512 B USB bulk endpoint buffer). A naïve implementation that erases the full sector on every call hits a painful edge case: 8 consecutive blocks in the same 4 KB sector erase it **8 separate times**:
 
 ```
-Write(blk_addr, blk_len):
-  for each 4 KB sector touched:
-    1. Read full 4 KB sector → temp buffer
-    2. Patch the 512 B blocks that changed
-    3. Erase sector (4 KB)
-    4. Write back 16 × 256 B pages
+call 1 → block 0 in sector 0: read 4 KB → erase → write 16 pages = ~93 ms
+call 2 → block 1 in sector 0: read 4 KB → erase → write 16 pages = ~93 ms  ← same sector again!
+...
+call 8 → block 7 in sector 0: read 4 KB → erase → write 16 pages = ~93 ms  ← 8th redundant erase
 ```
 
-A 4 KB static buffer (`_sector_buf`) holds the sector during the operation.
+For a 3 MB file: **6,144 calls × 93 ms ≈ 9.5 minutes**. Unusable.
 
-**Flash geometry:**
+### Write-back sector cache
+
+`usbd_storage_if.c` solves this with a one-sector write-back cache:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              _cache_buf[4096]  +  _cached_sector         │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+  STORAGE_Write_FS(blk)    │   STORAGE_Read_FS(blk)
+         │                 │           │
+  same sector?             │    flush_cache()
+    ├─ YES → patch RAM ────┤      then read flash
+    └─ NO  → flush_cache() │
+             load new sector│
+             patch RAM      │
+```
+
+**Rules:**
+1. Incoming 512 B block → patch it into `_cache_buf` in RAM. **No flash access.**
+2. When the *next* write is for a **different** sector → `flush_cache()`: erase the old sector, write all 16 pages back, then load the new sector.
+3. When a **read** arrives → `flush_cache()` first (so flash contains the latest data), then read flash normally.
+4. On USB **reconnect / init** → `flush_cache()` (commits any pending sector from the previous session).
+
+Result: each 4 KB sector is erased and written exactly **once**, regardless of how many of its 8 blocks were modified.
+
+### Performance comparison
+
+| Scenario | Without cache | With cache |
+|---|---|---|
+| Write 1 block to a sector | 93 ms | 93 ms (first cross to new sector) |
+| Write all 8 blocks of a sector | 8 × 93 ms = **744 ms** | **93 ms** |
+| Write 3 MB sequentially | ~9.5 min | ~70 s |
+| Write speedup (sequential) | 1× | **~8×** |
+
+The remaining bottleneck is the W25Q sector erase time (~45 ms typical) — a hardware limit that cannot be avoided without a larger RAM buffer or a different flash family.
+
+### Flash geometry
+
 | Parameter | Value |
 |-----------|-------|
-| Capacity | 8 MB (8,388,608 bytes) |
-| SCSI blocks | 16,384 × 512 B |
-| Sector size | 4,096 B (erase unit) |
-| Page size | 256 B (write unit) |
-| SPI clock | 21 MHz (PCLK2 84 MHz / 4) |
+| Capacity | set by `FLASH_SIZE_MB` (default 8 MB) |
+| SCSI blocks | `FLASH_SIZE_MB × 2048` blocks of 512 B |
+| Sector size | 4,096 B (erase unit — same for all W25Qxx) |
+| Page size | 256 B (write unit — same for all W25Qxx) |
+| SPI clock | 21 MHz (PCLK2 84 MHz ÷ 4) |
+| Typical sector erase | ~45 ms |
+| Typical page write | ~3 ms |
 
 ---
 
@@ -265,6 +307,9 @@ STM32Cube projects require `SysTick_Handler` calling `HAL_IncTick()` in `stm32f4
 
 ### Serial string descriptor buffer size
 `IntToUnicode()` writes **2 bytes per nibble** (UTF-16LE). The UID serial uses 20 nibbles = 40 bytes. The local buffer must be `uint8_t serial[40]`, not 24 — a 24-byte buffer overflows the stack and causes a HardFault during USB enumeration (when Windows requests string descriptor #3).
+
+### Write performance is bounded by flash erase time
+Sequential write throughput peaks at ~4 KB / 93 ms ≈ **44 KB/s**. This is a hardware limit — W25Q sector erase takes ~45 ms and cannot be parallelised or skipped. A 3 MB file takes roughly 70 seconds. Reads are much faster (~2.5 MB/s raw SPI bandwidth).
 
 ### HSI cannot be used for USB
 The internal RC oscillator (HSI 16 MHz) has ±1 % tolerance — 4× worse than USB FS requires. Always use the HSE crystal for the USB clock source.
