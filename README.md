@@ -23,6 +23,28 @@ Plug the board into any PC and it appears as an 8 MB USB flash drive — no driv
 
 ---
 
+## Configuration
+
+**One line** in [include/w25q.h](include/w25q.h) controls everything:
+
+```c
+#define FLASH_SIZE_MB  8U   // ← change this only
+```
+
+All other constants derive from it automatically — nothing else to touch:
+
+| `FLASH_SIZE_MB` | Chip | USB drive size | SCSI blocks | Sectors |
+|---|---|---|---|---|
+| `1` | W25Q80 | 1 MB | 2,048 | 256 |
+| `2` | W25Q16 | 2 MB | 4,096 | 512 |
+| `4` | W25Q32 | 4 MB | 8,192 | 1,024 |
+| **`8`** | **W25Q64** | **8 MB** | **16,384** | **2,048** |
+| `16` | W25Q128 | 16 MB | 32,768 | 4,096 |
+
+Page size (256 B) and sector size (4 KB) are identical across the entire W25Qxx family, so no other constant needs to change.
+
+---
+
 ## Architecture
 
 ```
@@ -154,14 +176,59 @@ A 4 KB static buffer (`_sector_buf`) holds the sector during the operation.
 
 ---
 
-## LED status codes
+## LED behaviour
 
-| Pattern | Meaning |
-|---------|---------|
-| Solid ON at boot | Init in progress |
-| 3 short blinks, 800 ms pause (repeat) | Running normally, waiting for USB host |
-| Rapid toggling (~10 Hz) | HardFault — firmware crashed |
-| Fast blink in `Error_Handler` | HAL peripheral init failed |
+The built-in LED on **PC13** is **active-low**: the GPIO being LOW turns the LED ON, HIGH turns it OFF.
+
+### Normal boot sequence
+
+```
+Power on
+    │
+    ▼
+[HAL + Clock init]  ── LED turns ON immediately after clock is ready
+    │
+    ▼
+[GPIO / SPI / W25Q / USB init]  ── LED stays solid ON during all init
+    │
+    ▼
+[Main loop]  ── heartbeat pattern starts
+```
+
+### Heartbeat pattern (normal operation)
+
+Once init is complete the firmware enters an infinite loop that produces this repeating pattern:
+
+```
+      120ms 120ms 120ms 120ms 120ms 120ms       800ms
+LED: ▁▁▁▁▁▁█████▁▁▁▁▁▁█████▁▁▁▁▁▁█████████████████████ ...repeat
+      blink 1    blink 2    blink 3    long ON pause
+      └───────────────── 1520 ms total ──────────────────┘
+```
+
+- **3 brief OFF-pulses** (120 ms each), LED on between them
+- **800 ms solid ON** after the 3rd pulse
+- Whole cycle repeats every **~1.5 seconds**
+
+This pattern means: *firmware is alive, USB stack is running, waiting for a host to connect.* The LED stays in this loop whether or not a USB cable is plugged in — USB traffic is handled by interrupts in the background.
+
+### Error patterns
+
+| What you see | Source | Meaning |
+|---|---|---|
+| Solid ON forever (no blinking) | Boot stuck | Clock / PLL failed before LED init, or HAL_Delay is hanging |
+| LED goes OFF and stays OFF | Old firmware without HardFault handler | Should not happen with current code |
+| **Very rapid flicker** (~100 Hz, looks dim/solid) | `HardFault_Handler` | Firmware crashed — null pointer, stack overflow, bad memory access |
+| **Fast blink** (~15 Hz, clearly visible) | `Error_Handler` | HAL peripheral init failed (SPI, RCC, etc.) |
+
+#### How to tell fast from very-rapid
+
+- **~15 Hz (Error_Handler):** clearly visible ON/OFF alternation, like a distress strobe
+- **~100 Hz (HardFault):** LED appears dimmed or "wrong brightness" rather than blinking — above the eye's flicker-fusion threshold
+
+#### Why the LED is not USB-aware
+
+The heartbeat loop runs on the main thread. USB data transfers happen entirely inside the USB OTG interrupt (priority 5). The main loop never blocks or yields for USB, so the blink pattern is the same whether the drive is idle or being written to. There is intentionally no "USB active" LED indicator — adding one would require a flag set inside the ISR and read in the main loop.
 
 ---
 
