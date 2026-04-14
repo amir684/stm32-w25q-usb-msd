@@ -21,6 +21,16 @@ Plug the board into any PC and it appears as an 8 MB USB flash drive — no driv
 
 **Flash chip:** Winbond W25Q64 (8 MB, 4 KB sectors, 256 B pages)
 
+| Front | Back |
+|:---:|:---:|
+| ![Black Pill — front](images/blackpill-front.jpg) | ![Black Pill — back](images/blackpill-back.jpg) |
+| WeAct Black Pill STM32F401RC — USB Type-C, BOOT0 & NRST buttons | Back side — W25Q64 flash chip soldered in SOIC-8 package |
+
+![W25Q64 close-up](images/w25q-closeup.png)
+*W25Q64 — 8 MB SPI NOR flash, 8-pin SOIC package, soldered directly on the Black Pill PCB*
+
+---
+
 ![Wiring diagram](images/wiring.svg)
 
 ---
@@ -277,6 +287,24 @@ This pattern means: *firmware is alive, USB stack is running, waiting for a host
 #### Why the LED is not USB-aware
 
 The heartbeat loop runs on the main thread. USB data transfers happen entirely inside the USB OTG interrupt (priority 5). The main loop never blocks or yields for USB, so the blink pattern is the same whether the drive is idle or being written to. There is intentionally no "USB active" LED indicator — adding one would require a flag set inside the ISR and read in the main loop.
+
+---
+
+## It works
+
+Once flashed, Windows recognises the board as a standard 8 MB USB drive with no drivers required.
+
+### Drive recognised by Windows
+
+| Drive properties | Explorer |
+|:---:|:---:|
+| ![Drive properties](images/drive-properties.png) | ![Drive contents in Explorer](images/drive-explorer.png) |
+| FAT filesystem, 7.96 MB capacity — identical to any USB stick | Project files copied to the flash and browsable in Explorer |
+
+### File transfer in progress
+
+![Transfer in progress](images/transfer-in-progress.png)
+*Copying 325 files to the flash drive at ~13.8 KB/s — write speed is bounded by the W25Q sector erase time (~45 ms per 4 KB), not the USB bus.*
 
 ---
 
