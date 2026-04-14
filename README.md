@@ -299,7 +299,7 @@ Once flashed, Windows recognises the board as a standard 8 MB USB drive with no 
 | Drive properties | Explorer |
 |:---:|:---:|
 | ![Drive properties](images/drive-properties.png) | ![Drive contents in Explorer](images/drive-explorer.png) |
-| FAT filesystem, 7.96 MB capacity — identical to any USB stick | Project files copied to the flash and browsable in Explorer |
+| FAT filesystem, 7.96 MB capacity — identical to any USB stick | **The flash drive is storing its own source code** — the files visible in Explorer are this very repository (`.git`, `src/`, `include/`, `README.md` …). The firmware running on the STM32 is serving the code that was used to build it. |
 
 ### File transfer in progress
 
