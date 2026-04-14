@@ -1,0 +1,64 @@
+<svg width="620" height="480" xmlns="http://www.w3.org/2000/svg" font-family="'Courier New', monospace">
+  <rect width="620" height="480" fill="#1e1e2e" rx="14"/>
+
+  <!-- Title -->
+  <text x="310" y="34" text-anchor="middle" fill="#cdd6f4" font-size="15" font-weight="bold">Software Architecture</text>
+
+  <!-- ═══ Layer 1: PC / Host ═══ -->
+  <rect x="60" y="55" width="500" height="52" fill="#313244" stroke="#f9e2af" stroke-width="2" rx="8"/>
+  <text x="310" y="77"  text-anchor="middle" fill="#f9e2af" font-size="13" font-weight="bold">PC / USB Host</text>
+  <text x="310" y="96"  text-anchor="middle" fill="#9399b2" font-size="11">Windows / Linux / macOS   —   standard mass-storage driver</text>
+
+  <!-- arrow -->
+  <line x1="310" y1="107" x2="310" y2="125" stroke="#585b70" stroke-width="2"/>
+  <polygon points="310,130 304,120 316,120" fill="#585b70"/>
+  <text x="355" y="120" fill="#585b70" font-size="10">USB FS  (12 Mbit/s)</text>
+
+  <!-- ═══ Layer 2: USB OTG FS hardware + HAL ═══ -->
+  <rect x="60" y="130" width="500" height="55" fill="#313244" stroke="#89b4fa" stroke-width="2" rx="8"/>
+  <text x="310" y="152" text-anchor="middle" fill="#89b4fa" font-size="13" font-weight="bold">USB OTG FS  +  HAL PCD</text>
+  <text x="310" y="170" text-anchor="middle" fill="#9399b2" font-size="11">usbd_conf.c · usbd_desc.c · usb_device.c</text>
+  <text x="450" y="170" fill="#585b70" font-size="10">IRQ pri 5</text>
+
+  <!-- arrow -->
+  <line x1="310" y1="185" x2="310" y2="203" stroke="#585b70" stroke-width="2"/>
+  <polygon points="310,208 304,198 316,198" fill="#585b70"/>
+  <text x="325" y="200" fill="#585b70" font-size="10">SCSI / BOT callbacks</text>
+
+  <!-- ═══ Layer 3: ST USB Device Library ═══ -->
+  <rect x="60" y="208" width="500" height="55" fill="#313244" stroke="#cba6f7" stroke-width="2" rx="8"/>
+  <text x="310" y="230" text-anchor="middle" fill="#cba6f7" font-size="13" font-weight="bold">ST USB Device Library  (MSC / BOT / SCSI)</text>
+  <text x="310" y="248" text-anchor="middle" fill="#9399b2" font-size="11">usbd_msc.c · usbd_msc_bot.c · usbd_msc_scsi.c  (framework, unmodified)</text>
+
+  <!-- arrow -->
+  <line x1="310" y1="263" x2="310" y2="281" stroke="#585b70" stroke-width="2"/>
+  <polygon points="310,286 304,276 316,276" fill="#585b70"/>
+  <text x="325" y="278" fill="#585b70" font-size="10">Read / Write / GetCapacity</text>
+
+  <!-- ═══ Layer 4: Storage Interface + Cache ═══ -->
+  <rect x="60" y="286" width="500" height="68" fill="#313244" stroke="#fab387" stroke-width="2" rx="8"/>
+  <text x="310" y="308" text-anchor="middle" fill="#fab387" font-size="13" font-weight="bold">Storage Interface  +  Write-Back Cache</text>
+  <text x="310" y="326" text-anchor="middle" fill="#9399b2" font-size="11">usbd_storage_if.c</text>
+  <!-- cache indicator -->
+  <rect x="200" y="334" width="220" height="14" fill="#45475a" rx="4"/>
+  <rect x="200" y="334" width="110" height="14" fill="#fab387" rx="4" opacity="0.6"/>
+  <text x="310" y="345" text-anchor="middle" fill="#1e1e2e" font-size="9" font-weight="bold">_cache_buf[4096]  (4 KB RAM)</text>
+
+  <!-- arrow -->
+  <line x1="310" y1="354" x2="310" y2="372" stroke="#585b70" stroke-width="2"/>
+  <polygon points="310,377 304,367 316,367" fill="#585b70"/>
+  <text x="330" y="369" fill="#585b70" font-size="10">SPI  (21 MHz)</text>
+
+  <!-- ═══ Layer 5: W25Q driver ═══ -->
+  <rect x="60" y="377" width="500" height="52" fill="#313244" stroke="#a6e3a1" stroke-width="2" rx="8"/>
+  <text x="310" y="399" text-anchor="middle" fill="#a6e3a1" font-size="13" font-weight="bold">W25Q SPI Driver</text>
+  <text x="310" y="417" text-anchor="middle" fill="#9399b2" font-size="11">w25q.c  —  ReadData · WritePage · EraseSector</text>
+
+  <!-- arrow -->
+  <line x1="310" y1="429" x2="310" y2="445" stroke="#585b70" stroke-width="2"/>
+  <polygon points="310,450 304,440 316,440" fill="#585b70"/>
+
+  <!-- ═══ Layer 6: Flash chip ═══ -->
+  <rect x="170" y="450" width="280" height="24" fill="#181825" stroke="#a6e3a1" stroke-width="1.5" rx="6"/>
+  <text x="310" y="467" text-anchor="middle" fill="#a6e3a1" font-size="12">W25Q64  NOR Flash  8 MB</text>
+</svg>

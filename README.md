@@ -21,6 +21,8 @@ Plug the board into any PC and it appears as an 8 MB USB flash drive — no driv
 
 **Flash chip:** Winbond W25Q64 (8 MB, 4 KB sectors, 256 B pages)
 
+![Wiring diagram](images/wiring.svg)
+
 ---
 
 ## Configuration
@@ -46,6 +48,8 @@ Page size (256 B) and sector size (4 KB) are identical across the entire W25Qxx 
 ---
 
 ## Architecture
+
+![Software architecture](images/architecture.svg)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -192,6 +196,8 @@ For a 3 MB file: **6,144 calls × 93 ms ≈ 9.5 minutes**. Unusable.
 4. On USB **reconnect / init** → `flush_cache()` (commits any pending sector from the previous session).
 
 Result: each 4 KB sector is erased and written exactly **once**, regardless of how many of its 8 blocks were modified.
+
+![Write cache before vs after](images/write-cache.svg)
 
 ### Performance comparison
 
