@@ -206,4 +206,4 @@ The internal RC oscillator (HSI 16 MHz) has ±1 % tolerance — 4× worse than U
 
 ## License
 
-MIT — do whatever you like, no warranty expressed or implied.
+Licensed under the [Apache License 2.0](LICENSE).
